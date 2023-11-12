@@ -21,9 +21,6 @@ module.exports.createCard = async (req, res) => {
   try {
     const { name, link } = req.body;
     const owner = req.user._id;
-
-    console.log({ name, link, owner });
-
     const newCard = await new Card({ name, link, owner });
 
     return res.status(SUCCESS_CODE_CREATED).send(await newCard.save());
@@ -33,14 +30,16 @@ module.exports.createCard = async (req, res) => {
         .status(ERROR_CODE_BAD_REQUEST)
         .send({ message: 'Ошибка валидации полей', ...error });
     }
+
+    return res
+      .status(error.code)
+      .send(error.message);
   }
 };
 
 module.exports.deleteCard = async (req, res) => {
   try {
     const { cardId } = req.params;
-    // console.log(req.params);
-    // console.log(cardId);
     const card = await Card.findByIdAndDelete(cardId);
 
     if (!card) {
@@ -48,7 +47,6 @@ module.exports.deleteCard = async (req, res) => {
     }
     res.status(SUCCESS_CODE_OK).send(card);
   } catch (error) {
-    console.log(error);
     if (error.message === 'NotFound') {
       return res.status(ERROR_CODE_NOT_FOUND).send({ message: 'Карточка по id не найдена' });
     }
@@ -61,29 +59,6 @@ module.exports.deleteCard = async (req, res) => {
   }
 };
 
-// module.exports.getUserById = async (req, res) => {
-//   try {
-//     const { idUser } = req.params;
-//     const user = await User.findById(idUser);
-//     if (!user) {
-//       throw new Error('NotFound');
-//     }
-//     res.status(SUCCESS_CODE_OK).send(user);
-//   } catch (error) {
-//     console.log(error);
-//     if (error.message === 'NotFound') {
-//       return res.status(404).send({ message: 'Пользователь по id не найден' });
-//     }
-
-//     if (error.name === 'CastError') {
-//       return res.status(ERROR_CODE_BAD_REQUEST).send({ message: 'Передан не валидный id' });
-//     }
-
-//     return res.status(ERROR_CODE_INTERNAL_SERVER_ERROR)
-// .send({ message: 'Ошибка на стороне сервера' });
-//   }
-// };
-
 module.exports.likeCard = async (req, res) => {
   try {
     const { cardId } = req.params;
@@ -95,7 +70,6 @@ module.exports.likeCard = async (req, res) => {
     }
     res.status(SUCCESS_CODE_OK).send(card);
   } catch (error) {
-    console.log(error);
     if (error.message === 'NotFound') {
       return res.status(ERROR_CODE_NOT_FOUND).send({ message: 'Карточка по id не найдена' });
     }
@@ -118,7 +92,6 @@ module.exports.dislikeCard = async (req, res) => {
     }
     res.status(SUCCESS_CODE_OK).send(card);
   } catch (error) {
-    console.log(error);
     if (error.message === 'NotFound') {
       return res.status(ERROR_CODE_NOT_FOUND).send({ message: 'Карточка по id не найдена' });
     }
