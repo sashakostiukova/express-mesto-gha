@@ -1,10 +1,11 @@
 const User = require('../models/User');
-
-const SUCCESS_CODE_OK = 200;
-const SUCCESS_CODE_CREATED = 201;
-const ERROR_CODE_BAD_REQUEST = 400;
-const ERROR_CODE_NOT_FOUND = 404;
-const ERROR_CODE_INTERNAL_SERVER_ERROR = 500;
+const {
+  SUCCESS_CODE_OK,
+  SUCCESS_CODE_CREATED,
+  ERROR_CODE_BAD_REQUEST,
+  ERROR_CODE_NOT_FOUND,
+  ERROR_CODE_INTERNAL_SERVER_ERROR,
+} = require('../utils/codes');
 
 module.exports.getUsers = async (req, res) => {
   try {
@@ -61,9 +62,10 @@ module.exports.updateUser = async (req, res) => {
   try {
     const { name, about } = req.body;
     const id = req.user._id;
-    const updatedUser = await User.findByIdAndUpdate(id, { name, about }, { new: true });
+    const updatedUser = await User
+      .findByIdAndUpdate(id, { name, about }, { new: true, runValidators: true });
 
-    return res.status(SUCCESS_CODE_CREATED).send(await updatedUser.save());
+    return res.status(SUCCESS_CODE_OK).send(await updatedUser.save());
   } catch (error) {
     if (error.name === 'ValidationError') {
       return res
@@ -81,9 +83,10 @@ module.exports.updateAvatar = async (req, res) => {
   try {
     const { avatar } = req.body;
     const id = req.user._id;
-    const updatedUser = await User.findByIdAndUpdate(id, { avatar }, { new: true });
+    const updatedUser = await User
+      .findByIdAndUpdate(id, { avatar }, { new: true, runValidators: true });
 
-    return res.status(SUCCESS_CODE_CREATED).send(await updatedUser.save());
+    return res.status(SUCCESS_CODE_OK).send(await updatedUser.save());
   } catch (error) {
     if (error.name === 'ValidationError') {
       return res

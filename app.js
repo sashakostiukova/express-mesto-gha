@@ -1,6 +1,7 @@
 const express = require('express');
 const { json } = require('express');
 const mongoose = require('mongoose');
+const helmet = require('helmet');
 const { router } = require('./routes');
 
 const { PORT = 3000, MONGO_URL = 'mongodb://127.0.0.1:27017/mestodb' } = process.env;
@@ -19,6 +20,7 @@ app.use((req, res, next) => {
 });
 
 app.use(json());
+app.use(helmet());
 
 app.use(router);
 

@@ -1,10 +1,11 @@
 const Card = require('../models/Card');
-
-const SUCCESS_CODE_OK = 200;
-const SUCCESS_CODE_CREATED = 201;
-const ERROR_CODE_BAD_REQUEST = 400;
-const ERROR_CODE_NOT_FOUND = 404;
-const ERROR_CODE_INTERNAL_SERVER_ERROR = 500;
+const {
+  SUCCESS_CODE_OK,
+  SUCCESS_CODE_CREATED,
+  ERROR_CODE_BAD_REQUEST,
+  ERROR_CODE_NOT_FOUND,
+  ERROR_CODE_INTERNAL_SERVER_ERROR,
+} = require('../utils/codes');
 
 module.exports.getCards = async (req, res) => {
   try {
