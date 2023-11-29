@@ -9,3 +9,5 @@ router.all('*', (req, res) => {
   res.status(ERROR_CODE_NOT_FOUND)
     .send({ message: 'Запрашиваемый ресурс не найден' });
 });
+
+module.exports = { router };

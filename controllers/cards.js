@@ -3,22 +3,21 @@ const {
   SUCCESS_CODE_OK,
   SUCCESS_CODE_CREATED,
   ERROR_CODE_BAD_REQUEST,
-  ERROR_CODE_NOT_FOUND,
-  ERROR_CODE_INTERNAL_SERVER_ERROR,
 } = require('../utils/codes');
+const NotFoundError = require('../errors/not-found-error');
+const ForbiddenError = require('../errors/forbidden-error');
+const BadRequestError = require('../errors/bad-request-error');
 
-module.exports.getCards = async (req, res) => {
+module.exports.getCards = async (req, res, next) => {
   try {
     const cards = await Card.find({});
     return res.send(cards);
   } catch (error) {
-    return res
-      .status(ERROR_CODE_INTERNAL_SERVER_ERROR)
-      .send({ message: 'Ошибка на стороне севера' });
+    next(error);
   }
 };
 
-module.exports.createCard = async (req, res) => {
+module.exports.createCard = async (req, res, next) => {
   try {
     const { name, link } = req.body;
     const owner = req.user._id;
@@ -27,80 +26,74 @@ module.exports.createCard = async (req, res) => {
     return res.status(SUCCESS_CODE_CREATED).send(await newCard.save());
   } catch (error) {
     if (error.name === 'ValidationError') {
-      return res
-        .status(ERROR_CODE_BAD_REQUEST)
-        .send({ message: 'Ошибка валидации полей', ...error });
+      error.message = 'Ошибка валидации полей';
+      error.statusCode = ERROR_CODE_BAD_REQUEST;
     }
 
-    return res
-      .status(error.code)
-      .send(error.message);
+    next(error);
   }
 };
 
-module.exports.deleteCard = async (req, res) => {
+module.exports.deleteCard = async (req, res, next) => {
   try {
     const { cardId } = req.params;
-    const card = await Card.findByIdAndDelete(cardId);
+    const card = await Card.findById(cardId);
 
     if (!card) {
-      throw new Error('NotFound');
+      throw new NotFoundError('Карточка по id не найдена');
     }
+
+    const ownerId = card.owner._id.toString();
+    const userId = req.user._id;
+
+    if (ownerId !== userId) {
+      throw new ForbiddenError('Нет прав для совершения действия');
+    }
+
+    await card.deleteOne();
     res.status(SUCCESS_CODE_OK).send(card);
   } catch (error) {
-    if (error.message === 'NotFound') {
-      return res.status(ERROR_CODE_NOT_FOUND).send({ message: 'Карточка по id не найдена' });
-    }
-
     if (error.name === 'CastError') {
-      return res.status(ERROR_CODE_BAD_REQUEST).send({ message: 'Передан не валидный id' });
+      next(new BadRequestError('Передан невалидный id'));
     }
 
-    return res.status(ERROR_CODE_INTERNAL_SERVER_ERROR).send({ message: 'Ошибка на стороне сервера' });
+    next(error);
   }
 };
 
-module.exports.likeCard = async (req, res) => {
+module.exports.likeCard = async (req, res, next) => {
   try {
     const { cardId } = req.params;
     const card = await Card
       .findByIdAndUpdate(cardId, { $addToSet: { likes: req.user._id } }, { new: true });
 
     if (!card) {
-      throw new Error('NotFound');
+      throw new NotFoundError('Карточка по id не найдена');
     }
     res.status(SUCCESS_CODE_OK).send(card);
   } catch (error) {
-    if (error.message === 'NotFound') {
-      return res.status(ERROR_CODE_NOT_FOUND).send({ message: 'Карточка по id не найдена' });
-    }
-
     if (error.name === 'CastError') {
-      return res.status(ERROR_CODE_BAD_REQUEST).send({ message: 'Передан не валидный id' });
+      next(new BadRequestError('Передан невалидный id'));
     }
 
-    return res.status(ERROR_CODE_INTERNAL_SERVER_ERROR).send({ message: 'Ошибка на стороне сервера' });
+    next(error);
   }
 };
 
-module.exports.dislikeCard = async (req, res) => {
+module.exports.dislikeCard = async (req, res, next) => {
   try {
     const { cardId } = req.params;
     const card = await Card
       .findByIdAndUpdate(cardId, { $pull: { likes: req.user._id } }, { new: true });
     if (!card) {
-      throw new Error('NotFound');
+      throw new NotFoundError('Карточка по id не найдена');
     }
     res.status(SUCCESS_CODE_OK).send(card);
   } catch (error) {
-    if (error.message === 'NotFound') {
-      return res.status(ERROR_CODE_NOT_FOUND).send({ message: 'Карточка по id не найдена' });
-    }
-
     if (error.name === 'CastError') {
-      return res.status(ERROR_CODE_BAD_REQUEST).send({ message: 'Передан не валидный id' });
+      next(new BadRequestError('Передан невалидный id'));
     }
 
-    return res.status(ERROR_CODE_INTERNAL_SERVER_ERROR).send({ message: 'Ошибка на стороне сервера' });
+    next(error);
   }
 };

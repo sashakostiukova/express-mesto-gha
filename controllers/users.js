@@ -1,64 +1,92 @@
+const bcrypt = require('bcrypt');
 const User = require('../models/User');
+const { generateToken } = require('../utils/jwt');
 const {
   SUCCESS_CODE_OK,
   SUCCESS_CODE_CREATED,
   ERROR_CODE_BAD_REQUEST,
-  ERROR_CODE_NOT_FOUND,
-  ERROR_CODE_INTERNAL_SERVER_ERROR,
+  MONGO_DUPLACATE_ERROR_CODE,
 } = require('../utils/codes');
+const NotFoundError = require('../errors/not-found-error');
+const BadRequestError = require('../errors/bad-request-error');
+const NotAuthentificatedError = require('../errors/not-authentificated-error');
+const ConflictError = require('../errors/conflict-error');
 
-module.exports.getUsers = async (req, res) => {
+module.exports.getUsers = async (req, res, next) => {
   try {
     const users = await User.find({});
     return res.send(users);
   } catch (error) {
-    return res
-      .status(ERROR_CODE_INTERNAL_SERVER_ERROR)
-      .send({ message: 'Ошибка на стороне севера' });
+    next(error);
   }
 };
 
-module.exports.getUserById = async (req, res) => {
+module.exports.getUserById = async (req, res, next) => {
   try {
     const { idUser } = req.params;
     const user = await User.findById(idUser);
     if (!user) {
-      throw new Error('NotFound');
+      throw new NotFoundError('Нет пользователя с таким id');
     }
     res.status(SUCCESS_CODE_OK).send(user);
   } catch (error) {
-    if (error.message === 'NotFound') {
-      return res.status(ERROR_CODE_NOT_FOUND).send({ message: 'Пользователь по id не найден' });
-    }
-
     if (error.name === 'CastError') {
-      return res.status(ERROR_CODE_BAD_REQUEST).send({ message: 'Передан не валидный id' });
+      next(new BadRequestError('Передан невалидный id'));
     }
 
-    return res.status(ERROR_CODE_INTERNAL_SERVER_ERROR).send({ message: 'Ошибка на стороне сервера' });
+    next(error);
   }
 };
 
-module.exports.createUser = async (req, res) => {
+module.exports.getUser = async (req, res, next) => {
   try {
-    const { name, about, avatar } = req.body;
-    const newUser = await new User({ name, about, avatar });
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new NotFoundError('Пользователь по id не найден');
+    }
+    res
+      .status(SUCCESS_CODE_OK)
+      .send(
+        {
+          name: user.name, about: user.about, avatar: user.avatar, email: user.email,
+        },
+      );
+  } catch (error) {
+    if (error.name === 'CastError') {
+      next(new BadRequestError('Передан невалидный id'));
+    }
 
-    return res.status(SUCCESS_CODE_CREATED).send(await newUser.save());
+    next(error);
+  }
+};
+
+module.exports.createUser = async (req, res, next) => {
+  try {
+    const {
+      name, about, avatar, email, password,
+    } = req.body;
+    const hash = await bcrypt.hash(password, 10);
+
+    const newUser = await new User({
+      name, about, avatar, email, password: hash,
+    });
+    await newUser.save();
+    return res.status(SUCCESS_CODE_CREATED).send({ email: newUser.email, _id: newUser._id });
   } catch (error) {
     if (error.name === 'ValidationError') {
-      return res
-        .status(ERROR_CODE_BAD_REQUEST)
-        .send({ message: 'Ошибка валидации полей', ...error });
+      error.statusCode = ERROR_CODE_BAD_REQUEST;
     }
 
-    return res
-      .status(error.code)
-      .send(error.message);
+    if (error.code === MONGO_DUPLACATE_ERROR_CODE) {
+      next(new ConflictError('Такой пользователь уже существует'));
+    }
+
+    next(error);
   }
 };
 
-module.exports.updateUser = async (req, res) => {
+module.exports.updateUser = async (req, res, next) => {
   try {
     const { name, about } = req.body;
     const id = req.user._id;
@@ -68,18 +96,15 @@ module.exports.updateUser = async (req, res) => {
     return res.status(SUCCESS_CODE_OK).send(await updatedUser.save());
   } catch (error) {
     if (error.name === 'ValidationError') {
-      return res
-        .status(ERROR_CODE_BAD_REQUEST)
-        .send({ message: 'Ошибка валидации полей', ...error });
+      error.message = 'Ошибка валидации полей';
+      error.statusCode = ERROR_CODE_BAD_REQUEST;
     }
 
-    return res
-      .status(error.code)
-      .send(error.message);
+    next(error);
   }
 };
 
-module.exports.updateAvatar = async (req, res) => {
+module.exports.updateAvatar = async (req, res, next) => {
   try {
     const { avatar } = req.body;
     const id = req.user._id;
@@ -89,13 +114,29 @@ module.exports.updateAvatar = async (req, res) => {
     return res.status(SUCCESS_CODE_OK).send(await updatedUser.save());
   } catch (error) {
     if (error.name === 'ValidationError') {
-      return res
-        .status(ERROR_CODE_BAD_REQUEST)
-        .send({ message: 'Ошибка валидации полей', ...error });
+      error.message = 'Ошибка валидации полей';
+      error.statusCode = ERROR_CODE_BAD_REQUEST;
     }
 
-    return res
-      .status(error.code)
-      .send(error.message);
+    next(error);
+  }
+};
+
+module.exports.login = async (req, res, next) => {
+  const { email, password } = req.body;
+  try {
+    const userAdmin = await User.findOne({ email })
+      .select('+password')
+      .orFail(() => new NotAuthentificatedError('Неправильный email или password'));
+
+    const matched = await bcrypt.compare(String(password), userAdmin.password);
+    if (!matched) {
+      throw new NotAuthentificatedError('Неправильный email или password');
+    }
+    const token = generateToken({ _id: userAdmin._id });
+
+    res.send({ token });
+  } catch (error) {
+    next(error);
   }
 };
