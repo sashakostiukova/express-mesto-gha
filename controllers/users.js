@@ -72,7 +72,14 @@ module.exports.createUser = async (req, res, next) => {
       name, about, avatar, email, password: hash,
     });
     await newUser.save();
-    return res.status(SUCCESS_CODE_CREATED).send({ newUser });
+    return res
+      .status(SUCCESS_CODE_CREATED)
+      .send({
+        email: newUser.email,
+        name: newUser.name,
+        about: newUser.about,
+        avatar: newUser.avatar,
+      });
   } catch (error) {
     if (error.name === 'ValidationError') {
       error.statusCode = ERROR_CODE_BAD_REQUEST;
