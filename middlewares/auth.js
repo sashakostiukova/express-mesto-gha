@@ -1,8 +1,6 @@
 const jwt = require('jsonwebtoken');
 const UnauthorizedError = require('../errors/unauthorized-error');
-const NotAuthentificatedError = require('../errors/not-authentificated-error');
-
-const { JWT_SECRET, NODE_ENV } = process.env;
+const { config } = require('../config');
 
 module.exports.auth = (req, res, next) => {
   let payload;
@@ -10,11 +8,11 @@ module.exports.auth = (req, res, next) => {
     const token = req.headers.authorization;
 
     if (!token) {
-      throw new NotAuthentificatedError('Неправильный email или password');
+      throw new UnauthorizedError('Неправильный email или password');
     }
 
     const validTocken = token.replace('Bearer ', '');
-    payload = jwt.verify(validTocken, NODE_ENV ? JWT_SECRET : 'dev_secret');
+    payload = jwt.verify(validTocken, config.NODE_ENV ? config.JWT : 'dev_secret');
   } catch (error) {
     if ((error.name === 'JsonWebTokenError')) {
       next(new UnauthorizedError('С токеном что-то не так'));

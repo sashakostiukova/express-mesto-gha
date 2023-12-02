@@ -1,15 +1,15 @@
+const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
 const { generateToken } = require('../utils/jwt');
 const {
   SUCCESS_CODE_OK,
   SUCCESS_CODE_CREATED,
-  ERROR_CODE_BAD_REQUEST,
   MONGO_DUPLACATE_ERROR_CODE,
 } = require('../utils/codes');
 const NotFoundError = require('../errors/not-found-error');
 const BadRequestError = require('../errors/bad-request-error');
-const NotAuthentificatedError = require('../errors/not-authentificated-error');
+const NotAuthentificatedError = require('../errors/unauthorized-error');
 const ConflictError = require('../errors/conflict-error');
 
 module.exports.getUsers = async (req, res, next) => {
@@ -28,9 +28,9 @@ module.exports.getUserById = async (req, res, next) => {
     if (!user) {
       throw new NotFoundError('Нет пользователя с таким id');
     }
-    res.status(SUCCESS_CODE_OK).send(user);
+    return res.status(SUCCESS_CODE_OK).send(user);
   } catch (error) {
-    if (error.name === 'CastError') {
+    if (error instanceof mongoose.Error.CastError) {
       next(new BadRequestError('Передан невалидный id'));
     }
 
@@ -45,7 +45,7 @@ module.exports.getUser = async (req, res, next) => {
     if (!user) {
       throw new NotFoundError('Пользователь по id не найден');
     }
-    res
+    return res
       .status(SUCCESS_CODE_OK)
       .send(
         {
@@ -53,10 +53,6 @@ module.exports.getUser = async (req, res, next) => {
         },
       );
   } catch (error) {
-    if (error.name === 'CastError') {
-      next(new BadRequestError('Передан невалидный id'));
-    }
-
     next(error);
   }
 };
@@ -81,8 +77,8 @@ module.exports.createUser = async (req, res, next) => {
         avatar: newUser.avatar,
       });
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      error.statusCode = ERROR_CODE_BAD_REQUEST;
+    if (error instanceof mongoose.Error.ValidationError) {
+      next(new BadRequestError('Ошибка валидации полей'));
     }
 
     if (error.code === MONGO_DUPLACATE_ERROR_CODE) {
@@ -102,9 +98,8 @@ module.exports.updateUser = async (req, res, next) => {
 
     return res.status(SUCCESS_CODE_OK).send(await updatedUser.save());
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      error.message = 'Ошибка валидации полей';
-      error.statusCode = ERROR_CODE_BAD_REQUEST;
+    if (error instanceof mongoose.Error.ValidationError) {
+      next(new BadRequestError('Ошибка валидации полей'));
     }
 
     next(error);
@@ -120,9 +115,8 @@ module.exports.updateAvatar = async (req, res, next) => {
 
     return res.status(SUCCESS_CODE_OK).send(await updatedUser.save());
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      error.message = 'Ошибка валидации полей';
-      error.statusCode = ERROR_CODE_BAD_REQUEST;
+    if (error instanceof mongoose.Error.ValidationError) {
+      next(new BadRequestError('Ошибка валидации полей'));
     }
 
     next(error);
@@ -142,7 +136,7 @@ module.exports.login = async (req, res, next) => {
     }
     const token = generateToken({ _id: userAdmin._id });
 
-    res.send({ token });
+    return res.send({ token });
   } catch (error) {
     next(error);
   }

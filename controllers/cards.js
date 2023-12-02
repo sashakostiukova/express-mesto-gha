@@ -1,8 +1,8 @@
+const mongoose = require('mongoose');
 const Card = require('../models/Card');
 const {
   SUCCESS_CODE_OK,
   SUCCESS_CODE_CREATED,
-  ERROR_CODE_BAD_REQUEST,
 } = require('../utils/codes');
 const NotFoundError = require('../errors/not-found-error');
 const ForbiddenError = require('../errors/forbidden-error');
@@ -25,9 +25,8 @@ module.exports.createCard = async (req, res, next) => {
 
     return res.status(SUCCESS_CODE_CREATED).send(await newCard.save());
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      error.message = 'Ошибка валидации полей';
-      error.statusCode = ERROR_CODE_BAD_REQUEST;
+    if (error instanceof mongoose.Error.ValidationError) {
+      next(new BadRequestError('Ошибка валидации полей'));
     }
 
     next(error);
@@ -51,9 +50,9 @@ module.exports.deleteCard = async (req, res, next) => {
     }
 
     await card.deleteOne();
-    res.status(SUCCESS_CODE_OK).send(card);
+    return res.status(SUCCESS_CODE_OK).send(card);
   } catch (error) {
-    if (error.name === 'CastError') {
+    if (error instanceof mongoose.Error.CastError) {
       next(new BadRequestError('Передан невалидный id'));
     }
 
@@ -70,9 +69,9 @@ module.exports.likeCard = async (req, res, next) => {
     if (!card) {
       throw new NotFoundError('Карточка по id не найдена');
     }
-    res.status(SUCCESS_CODE_OK).send(card);
+    return res.status(SUCCESS_CODE_OK).send(card);
   } catch (error) {
-    if (error.name === 'CastError') {
+    if (error instanceof mongoose.Error.CastError) {
       next(new BadRequestError('Передан невалидный id'));
     }
 
@@ -88,9 +87,9 @@ module.exports.dislikeCard = async (req, res, next) => {
     if (!card) {
       throw new NotFoundError('Карточка по id не найдена');
     }
-    res.status(SUCCESS_CODE_OK).send(card);
+    return res.status(SUCCESS_CODE_OK).send(card);
   } catch (error) {
-    if (error.name === 'CastError') {
+    if (error instanceof mongoose.Error.CastError) {
       next(new BadRequestError('Передан невалидный id'));
     }
 
