@@ -16,9 +16,9 @@ module.exports.auth = (req, res, next) => {
   } catch (error) {
     if ((error.name === 'JsonWebTokenError')) {
       next(new UnauthorizedError('С токеном что-то не так'));
+    } else {
+      next(error);
     }
-
-    next(error);
   }
 
   req.user = payload;

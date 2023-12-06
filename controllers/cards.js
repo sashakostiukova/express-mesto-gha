@@ -27,9 +27,9 @@ module.exports.createCard = async (req, res, next) => {
   } catch (error) {
     if (error instanceof mongoose.Error.ValidationError) {
       next(new BadRequestError('Ошибка валидации полей'));
+    } else {
+      next(error);
     }
-
-    next(error);
   }
 };
 
@@ -54,9 +54,9 @@ module.exports.deleteCard = async (req, res, next) => {
   } catch (error) {
     if (error instanceof mongoose.Error.CastError) {
       next(new BadRequestError('Передан невалидный id'));
+    } else {
+      next(error);
     }
-
-    next(error);
   }
 };
 
@@ -73,9 +73,9 @@ module.exports.likeCard = async (req, res, next) => {
   } catch (error) {
     if (error instanceof mongoose.Error.CastError) {
       next(new BadRequestError('Передан невалидный id'));
+    } else {
+      next(error);
     }
-
-    next(error);
   }
 };
 
@@ -91,8 +91,8 @@ module.exports.dislikeCard = async (req, res, next) => {
   } catch (error) {
     if (error instanceof mongoose.Error.CastError) {
       next(new BadRequestError('Передан невалидный id'));
+    } else {
+      next(error);
     }
-
-    next(error);
   }
 };

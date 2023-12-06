@@ -1,10 +1,7 @@
 const router = require('express').Router();
 const { celebrate } = require('celebrate');
 const { userSignInSchema, userSignUpSchema } = require('../utils/validationSchemas');
-const {
-  login,
-  createUser,
-} = require('../controllers/users');
+const { login, createUser } = require('../controllers/users');
 const { auth } = require('../middlewares/auth');
 const { userRouter } = require('./users');
 const { cardRouter } = require('./cards');

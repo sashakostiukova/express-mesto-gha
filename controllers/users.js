@@ -32,9 +32,9 @@ module.exports.getUserById = async (req, res, next) => {
   } catch (error) {
     if (error instanceof mongoose.Error.CastError) {
       next(new BadRequestError('Передан невалидный id'));
+    } else {
+      next(error);
     }
-
-    next(error);
   }
 };
 
@@ -79,13 +79,11 @@ module.exports.createUser = async (req, res, next) => {
   } catch (error) {
     if (error instanceof mongoose.Error.ValidationError) {
       next(new BadRequestError('Ошибка валидации полей'));
-    }
-
-    if (error.code === MONGO_DUPLACATE_ERROR_CODE) {
+    } else if (error.code === MONGO_DUPLACATE_ERROR_CODE) {
       next(new ConflictError('Такой пользователь уже существует'));
+    } else {
+      next(error);
     }
-
-    next(error);
   }
 };
 
@@ -100,9 +98,9 @@ module.exports.updateUser = async (req, res, next) => {
   } catch (error) {
     if (error instanceof mongoose.Error.ValidationError) {
       next(new BadRequestError('Ошибка валидации полей'));
+    } else {
+      next(error);
     }
-
-    next(error);
   }
 };
 
@@ -117,9 +115,9 @@ module.exports.updateAvatar = async (req, res, next) => {
   } catch (error) {
     if (error instanceof mongoose.Error.ValidationError) {
       next(new BadRequestError('Ошибка валидации полей'));
+    } else {
+      next(error);
     }
-
-    next(error);
   }
 };
 
